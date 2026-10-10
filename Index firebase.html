@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 1. Add the Firebase Compatibility CDN scripts (Found in your Firebase Console) -->
+<!-- Load the core Firebase App compatibility library -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+
+<!-- Load the Firestore database compatibility library -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<!-- Load the Firebase Cloud Messaging compatibility library -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
+
+<script>
+  // 2. Initialize Firebase with your project's credentials [user_context]
+  const firebaseConfig = {
+    apiKey: "AIzaSyCGLy6SktqTQcTSHMeHjjXVess5RSSihFs",
+    authDomain: "hgc-attendance-app-3f6ce.firebaseapp.com",
+    projectId: "hgc-attendance-app-3f6ce",
+    storageBucket: "hgc-attendance-app-3f6ce.appspot.com",
+    messagingSenderId: "173031184940",
+    appId: "1:173031184940:web:1259d7626d7a4e02c18f89"
+  };
+
+  // 3. Start the Firebase instance
+  firebase.initializeApp(firebaseConfig);
+  window.db = firebase.firestore();
+  const messaging = firebase.messaging();
+</script>
+
+  <style>
+    :root {
+      --primary: #1d4ed8;
+      --primary-dark: #1e3a8a;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --absent-bg: #ffe4e6;
+      --absent-text: #9f1239;
+      --fullday-bg: #dcfce7;
+      --fullday-text: #166534;
+      --halfday-bg: #fef3c7;
+      --halfday-text: #92400e;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: 40px;
+    }
+    .header-bar {
+      background: #1d4ed8;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      box-sizing: border-box;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .header-title { font-size: 20px; font-weight: 800; margin: 0; }
+    .header-subtitle { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    .btn-promote-header {
+      background: #ff4d4d;
+      color: white;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 20px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .container { padding: 16px; max-width: 1100px; margin: 0 auto; }
+    .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }
+    select, input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #f8fafc; box-sizing: border-box; font-weight: 600; }
+    .btn { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+    .btn-reset { background: #ff4d4d; color: white; }
+    .btn-holiday { background: #f59e0b; color: white; }
+    .btn-report { background: #2563eb; color: white; }
+    .btn-tc { background: #7c3aed; color: white; }
+    .btn-leave { background: #0284c7; color: white; }
+    .btn-all-present {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 4px;
+      cursor: pointer;
+    }
+    .live-status-bar {
+      display: flex; gap: 10px; margin-top: 14px; background: #f8fafc; padding: 10px 14px;
+      border-radius: 8px; font-size: 12px; font-weight: 700; align-items: center; flex-wrap: wrap;
+    }
+    .status-pill { padding: 4px 12px; border-radius: 12px; font-weight: 700; font-size: 11px; }
+    .badge-absent { background: var(--absent-bg); color: var(--absent-text); padding: 4px 12px; border-radius: 12px; font-weight: 800; font-size: 12px; }
+    .badge-fullday { background: var(--fullday-bg); color: var(--fullday-text); padding: 4px 12px; border-radius: 12px; font-weight: 800; font-size: 12px; }
+    .badge-halfday { background: var(--halfday-bg); color: var(--halfday-text); padding: 4px 12px; border-radius: 12px; font-weight: 800; font-size: 12px; }
+    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; background: white; }
+    th, td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th { background: #f8fafc; color: #0f172a; font-weight: 800; }
+    input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); }
+    .save-action-area { display: flex; justify-content: center; align-items: center; margin-top: 20px; padding: 10px 0; }
+   
+    table th:nth-child(1), table td:nth-child(1) { position: sticky; left: 0; background-color: #ffffff; z-index: 2; }
+    table th:nth-child(1) { background-color: #f8fafc; z-index: 3; }
+   
+    #loginOverlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      display: flex; justify-content: center; align-items: center; z-index: 99999; color: #ffffff;
+    }
+    .login-box {
+      background: #ffffff; color: #0f172a; padding: 30px; border-radius: 16px;
+      width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center;
+    }
+    #tcModal, #leaveModal, #holidayModal {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 9998;
+    }
+    .modal-content {
+      background: white; width: 95%; max-width: 720px; border-radius: 12px; padding: 16px; max-height: 90vh; overflow-y: auto; box-sizing: border-box;
+    }
+   
+    @media print {
+      @page { size: A4 portrait; margin: 8mm; }
+      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: white !important; }
+      body * { visibility: hidden !important; }
+      #reportCard, #reportCard *, #certificateModal, #certificateModal * { visibility: visible !important; }
+      #reportCard { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; background: #ffffff !important; }
+      #certificateModal { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; background: white !important; }
+     
+      .no-print, #reportCard .grid, #reportCard button, #reportCard input { display: none !important; }
+      #reportSummarySection { display: block !important; page-break-after: always !important; }
+      #printReportDateWiseSection { display: block !important; page-break-before: always !important; }
+      #reportCard h3 { font-size: 13px !important; margin-bottom: 4px !important; text-align: center !important; }
+      #reportMetaHeader { font-size: 9px !important; margin-bottom: 6px !important; text-align: center !important; }
+      #reportCard table { width: 100% !important; border-collapse: collapse !important; font-size: 7.5px !important; page-break-inside: auto; table-layout: fixed; }
+      #reportCard tr { page-break-inside: avoid; page-break-after: auto; }
+      #reportCard th, #reportCard td { padding: 2px 2px !important; border: 1px solid #333333 !important; text-align: center !important; word-break: break-word; overflow: hidden; }
+      #reportCard td:nth-child(2) { text-align: left !important; }
+    }
+    #printReportDateWiseSection { display: none; }
+   
+    #appSplashScreen {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      display: flex; justify-content: center; align-items: center; z-index: 9999;
+      transition: opacity 0.5s ease, visibility 0.5s ease; color: #ffffff;
+    }
+    #appSplashScreen.hidden { opacity: 0; visibility: hidden; }
+    /* PREMIUM GLASSMORPHISM OPENING SCREEN */
+#appSplashScreen {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: radial-gradient(circle at 50% 50%, #1e3a8a 0%, #0f172a 100%);
+  display: flex; justify-content: center; align-items: center; z-index: 99999;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+  color: #ffffff;
+}
+#appSplashScreen.hidden { opacity: 0; visibility: hidden; }
+
+.splash-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  padding: 44px 32px;
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.4);
+}
+.splash-logo {
+  font-size: 58px;
+  margin-bottom: 16px;
+  animation: logoPulse 2s ease-in-out infinite;
+}
+.splash-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 0 0 6px 0;
+  color: #f8fafc;
+}
+.splash-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 36px 0;
+}
+.splash-spinner {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+}
+.spinner-ring {
+  position: absolute; width: 100%; height: 100%;
+  border: 3.5px solid transparent; border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.spinner-ring-inner {
+  position: absolute; width: 70%; height: 70%; top: 15%; left: 15%;
+  border: 3.5px solid transparent; border-bottom-color: #ef4444;
+  border-radius: 50%;
+  animation: spinReverse 1.4s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes spinReverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes logoPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.3)); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 25px rgba(56, 189, 248, 0.6)); }
+}
+
+  </style>
+</head>
+<body>
+  <div id="appSplashScreen">
+    <div style="text-align: center; padding: 20px;">
+      <div style="font-size: 64px; margin-bottom: 12px;">📋</div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 6px 0;">Attendance Manager</h1>
+      <p style="font-size: 13px; color: #94a3b8; margin: 0 0 24px 0;">Loading System & Roster...</p>
+      <div style="width: 38px; height: 38px; border: 3.5px solid rgba(255, 255, 255, 0.15); border-top-color: #38bdf8; border-radius: 50%; margin: 0 auto; animation: spin 0.8s linear infinite;"></div>
+    </div>
+  </div>
+  <div id="loginOverlay" style="display:none;">
+    <div class="login-box">
+      <h2 style="margin-top:0; color:#1d4ed8;">Faculty Login Gate</h2>
+      <p style="font-size:13px; color:#64748b;">Please select your profile to access the attendance system.</p>
+      <div style="margin: 20px 0;">
+        <select id="loginTeacherSelect" style="width:100%; padding:12px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
+          <option value="">-- Select Teacher Profile --</option>
+        </select>
+      </div>
+      <button class="btn" style="background:#1d4ed8; color:white; width:100%; justify-content:center; padding:12px;" onclick="handleLogin()">🚀 Proceed to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Faculty Leave Modal Popup -->
+  <div id="leaveModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0; color:#1e3a8a;">🌴 Manage Faculty Leave</h3>
+        <button class="btn" style="background:#64748b; color:white; padding:6px 12px;" onclick="closeLeaveModal()">Close</button>
+      </div>
+      <p style="font-size:13px; color:#64748b;">Record faculty leave to automatically trigger bell-schedule gap checks and substitute warnings.</p>
+      <div class="grid" style="margin-top:15px;">
+        <div>
+          <label>Leave Date</label>
+          <input type="date" id="leaveDate">
+        </div>
+        <div>
+          <label>Teacher Name</label>
+          <select id="leaveTeacherSelect"><option value="">-- Select Teacher --</option></select>
+        </div>
+        <div>
+          <label>Duration / Status</label>
+          <select id="leaveStatus">
+            <option value="Full Day">Full Day</option>
+            <option value="Morning Half">Morning Half</option>
+            <option value="Afternoon Half">Afternoon Half</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:20px; text-align:right;">
+        <button class="btn btn-report" onclick="submitLeaveRecord()">Save Leave Record</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mark Holiday Modal Popup -->
+  <div id="holidayModal">
+    <div class="modal-content" style="max-width: 760px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0; color:#1e3a8a; font-size: 16px;">🌴 Holiday & Leave Management</h3>
+        <button class="btn" style="background:#64748b; color:white; padding:6px 12px;" onclick="closeHolidayModal()">Close</button>
+      </div>
+      <p style="font-size:12px; color:#64748b; margin-bottom:10px;">Select department classes for active date (<span id="holidayModalDateDisplay" style="font-weight:700; color:#1e3a8a;"></span>). Scroll right inside the table to view 2nd and 3rd years.</p>
+      
+      <div style="margin: 10px 0; display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn btn-holiday" style="padding: 8px 12px; font-size: 12px;" onclick="toggleSelectAllHolidays(true)">✅ Select All</button>
+        <button class="btn" style="background: #64748b; color: white; padding: 8px 12px; font-size: 12px;" onclick="toggleSelectAllHolidays(false)">❌ Clear All</button>
+      </div>
+
+      <div class="table-container" style="max-height: 48vh;">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align: left; padding-left: 14px; min-width: 170px;">Department / Course</th>
+              <th style="min-width: 90px;">1st Year</th>
+              <th style="min-width: 90px;">2nd Year</th>
+              <th style="min-width: 90px;">3rd Year</th>
+            </tr>
+          </thead>
+          <tbody id="holidayDeptTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="font-weight: 700; font-size: 12px; color: #475569;" id="holidaySelectionCount">Selected: 0 classes</div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-holiday" style="padding: 10px 20px; font-size: 13px;" onclick="submitMultipleHolidays()">🌴 Save Selected Holidays</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TC / Exit Modal -->
+  <div id="tcModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0; color:#1e3a8a;">🎓 Manage TC / Exited Students</h3>
+        <button class="btn" style="background:#64748b; color:white; padding:6px 12px;" onclick="closeTcModal()">Close</button>
+      </div>
+      <p style="font-size:13px; color:#64748b;">All students are Active by default. Select 'TC Issued' or 'Exited' only for departed students, or change back to 'Active' if they return.</p>
+      <div class="table-container" style="max-height:50vh; margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Roll No</th>
+              <th style="text-align:left;">Student Name</th>
+              <th>Status</th>
+              <th>Action / Certificate</th>
+            </tr>
+          </thead>
+          <tbody id="tcModalTableBody">
+            <tr><td colspan="4">Loading roster...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Certificate Print Modal -->
+  <div id="certificateModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:white; z-index:99999; padding:30px; box-sizing:border-box; overflow-y:auto;">
+    <div style="max-width:800px; margin:0 auto;">
+      <div class="no-print" style="display:flex; justify-content:space-between; margin-bottom:20px;">
+        <button class="btn" style="background:#64748b; color:white;" onclick="closeCertificateModal()">← Back</button>
+        <button class="btn btn-report" onclick="window.print()">🖨️ Print Certificate</button>
+      </div>
+      <div style="text-align:center; border-bottom:2px solid #1d4ed8; padding-bottom:15px; margin-bottom:20px;">
+        <h2 style="margin:0; color:#1e3a8a;">Hermann Gundert College of Advanced Studies, Thalassery</h2>
+        <p style="margin:4px 0; font-size:13px; color:#475569;"> Affiliated to Kannur University</p>
+        <h3 style="margin:10px 0 0 0; color:#0f172a;">OFFICIAL ATTENDANCE HISTORY CERTIFICATE</h3>
+      </div>
+      <div id="certDetailsBody" style="font-size:14px; line-height:1.6; margin-bottom:20px;"></div>
+      <div style="margin-top:60px; display:flex; justify-content:space-between;">
+        <div>Date: <span id="certPrintDate"></span></div>
+        <div style="text-align:center;">Authorized Signatory<br><br><b>Principal / HOD</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-bar">
+    <div>
+      <div class="header-title">HGC Attendance</div>
+      <div class="header-subtitle">Department & Daily Tracking System</div>
+    </div>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <span id="activeTeacherBadge" style="background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:20px; font-size:13px; font-weight:700;">👤 Faculty: Guest</span>
+      <button class="btn no-print" style="background:rgba(255,255,255,0.2); color:white; padding:6px 12px; font-size:12px;" onclick="handleLogout()">Logout</button>
+      <button class="btn-promote-header no-print" onclick="triggerPromotion()">🎓 Promote</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card no-print">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+        <h4 style="margin: 0; color: #1e3a8a; font-size: 15px;">📋 Daily Attendance Control Panel</h4>
+        <button class="btn btn-leave" onclick="openLeaveModal()">📅 Manage Faculty Leave</button>
+      </div>
+      <div class="grid">
+        <div>
+          <label>Department</label>
+          <select id="department" onchange="autoLoadData()">
+            <option value="BA ENGLISH">BA ENGLISH</option>
+            <option value="BA HISTORY">BA HISTORY</option>
+            <option value="Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING">BSc COMPUTER SCIENCE (AI & ML)</option>
+            <option value="B.COM CO-OPERATION">B.COM CO-OPERATION</option>
+            <option value="B.COM LOGISTICS">B.COM LOGISTICS</option>
+            <option value="BBA TTM">BBA TTM</option>
+          </select>
+        </div>
+        <div>
+          <label>Year</label>
+          <select id="year" onchange="autoLoadData()">
+            <option value="1st Year">1st Year</option>
+            <option value="2nd Year">2nd Year</option>
+            <option value="3rd Year">3rd Year</option>
+          </select>
+        </div>
+        <div>
+          <label>Date</label>
+          <input type="date" id="attDate" onchange="autoLoadData()">
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap; gap:10px;">
+        <div id="studentCountBadge" style="font-weight:700; font-size:13px; color:#475569;">Total Students: 0</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-tc" onclick="openTcModal()">🎓 Manage TC / Exit</button>
+          <button class="btn btn-holiday" onclick="openHolidayModal()">🌴 Mark Holiday</button>
+          <button class="btn btn-reset" onclick="removeAllAttendance()">🗑️ Reset</button>
+          <button class="btn btn-report" onclick="toggleConsolidatedCard()">📊 Consolidated Reports</button>
+        </div>
+      </div>
+      <div class="live-status-bar" id="liveStatusBar">
+        <span>Overall Day Summary:</span>
+        <span class="status-pill" style="background:#dcfce7; color:#166534;" id="cntFull">Full Day: 0</span>
+        <span class="status-pill" style="background:#fef3c7; color:#92400e;" id="cntHalf">Half Day: 0</span>
+        <span class="status-pill" style="background:#ffe4e6; color:#9f1239;" id="cntAbsent">Absent: 0</span>
+      </div>
+    </div>
+
+    <!-- Consolidated Reports Card -->
+    <div class="card" id="reportCard" style="display:none;">
+      <h3 style="margin-top:0;">📊 Consolidated Attendance Summary Report</h3>
+      <div id="reportMetaHeader" style="font-size:13px; font-weight:700; color:#334155; margin-bottom:12px;"></div>
+      <div class="grid no-print">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="summaryFromDate">
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="summaryToDate">
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn btn-report" style="width:100%;" onclick="viewConsolidatedReport()">Generate Report</button>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn" style="width:100%; background:#64748b; color:white;" onclick="triggerAndroidPrint()">🖨 Print Report</button>
+        </div>
+      </div>
+      <div id="reportSummarySection" style="margin-top:14px;">
+        <div style="text-align:center; color:#64748b; padding:20px;">Select date ranges and click Generate Report.</div>
+      </div>
+      <div id="printReportDateWiseSection"></div>
+    </div>
+
+    <div class="card" id="mainCard">
+      <div id="holidayBanner" style="display:none; color: var(--danger); font-weight:800; text-align:center; padding:10px; background:#fee2e2; border-radius:8px; margin-bottom:12px;">
+        *** MARKED AS HOLIDAY ***
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:70px;">Roll No</th>
+              <th style="width:180px; text-align:left;">Student Name</th>
+              <th>H1<br><select id="t1" class="no-print"><option value="">Teacher</option></select><br><button class="btn-all-present no-print" onclick="markFullHour(1)">All Present</button></th>
+              <th>H2<br><select id="t2" class="no-print"><option value="">Teacher</option></select><br><button class="btn-all-present no-print" onclick="markFullHour(2)">All Present</button></th>
+              <th>H3<br><select id="t3" class="no-print"><option value="">Teacher</option></select><br><button class="btn-all-present no-print" onclick="markFullHour(3)">All Present</button></th>
+              <th>H4<br><select id="t4" class="no-print"><option value="">Teacher</option></select><br><button class="btn-all-present no-print" onclick="markFullHour(4)">All Present</button></th>
+              <th>H5<br><select id="t5" class="no-print"><option value="">Teacher</option></select><br><button class="btn-all-present no-print" onclick="markFullHour(5)">All Present</button></th>
+              <th style="width:110px;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="8">Loading roster...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="save-action-area no-print">
+        <button class="btn" style="background:#22c55e; color:white; font-size:15px; padding:12px 28px;" onclick="saveData()">💾 Save Attendance Permanently</button>
+      </div>
+    </div>
+
+    <!-- Bell-Schedule Gap & Leave-Suppression Monitor -->
+    <div class="card no-print" style="background: #fffbeb; border: 1px solid #fde68a;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h4 style="margin: 0; color: #b45309; font-size: 15px;">⚠️ Bell-Schedule Gap & Leave-Suppression Monitor</h4>
+          <p style="margin: 4px 0 0 0; font-size: 12px; color: #92400e;">Detects college-wide missing hourly entries, respects approved faculty leave, and forwards alerts to substitute teachers.</p>
+        </div>
+        <div>
+          <button class="btn" style="background: #d97706; color: white;" onclick="checkAttendanceMissingWorkflow()">Check Missed Attendance</button>
+        </div>
+      </div>
+      <div id="gapAlertsContainer" style="margin-top: 10px; font-size: 13px;"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentRoster = [];
+    let isHoliday = false;
+    let cachedTeachers = [];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date().toISOString().split('T')[0];
+      const dateEl = document.getElementById("attDate");
+      if (dateEl && !dateEl.value) dateEl.value = today;
+      const leaveDateEl = document.getElementById("leaveDate");
+      if (leaveDateEl && !leaveDateEl.value) leaveDateEl.value = today;
+      const activeTeacher = localStorage.getItem("activeTeacherCode");
+      if (!activeTeacher) {
+        document.getElementById("loginOverlay").style.display = "flex";
+      } else {
+        const mockToken = "WEB_FCM_TOKEN_" + activeTeacher + "_" + Date.now();
+        google.script.run.registerFcmToken(activeTeacher, mockToken);
+      }
+      loadTeachersAndInitialize();
+    });
+
+    function loadTeachersAndInitialize() {
+      google.script.run
+        .withSuccessHandler(function(teachers) {
+          cachedTeachers = teachers || [];
+          populateAllTeacherDropdowns(teachers);
+          updateActiveTeacherBadge();
+          autoLoadData();
+          checkAttendanceMissingWorkflow();
+        })
+        .withFailureHandler(function(err) {
+          autoLoadData();
+        })
+        .getTeacherList();
+    }
+
+    function populateAllTeacherDropdowns(teachers) {
+      if (!teachers || teachers.length === 0) return;
+      const loginSelect = document.getElementById("loginTeacherSelect");
+      if (loginSelect) {
+        loginSelect.innerHTML = '<option value="">-- Select Teacher Profile --</option>';
+        teachers.forEach(t => {
+          loginSelect.innerHTML += `<option value="${t.code}">${t.displayName}</option>`;
+        });
+      }
+      const leaveSelect = document.getElementById("leaveTeacherSelect");
+      if (leaveSelect) {
+        leaveSelect.innerHTML = '<option value="">-- Select Teacher --</option>';
+        teachers.forEach(t => {
+          leaveSelect.innerHTML += `<option value="${t.code}">${t.displayName}</option>`;
+        });
+      }
+      for (let h = 1; h <= 5; h++) {
+        const selectEl = document.getElementById(`t${h}`);
+        if (!selectEl) continue;
+        const curVal = selectEl.value;
+        selectEl.innerHTML = '<option value="">-- Teacher --</option>';
+        teachers.forEach(t => {
+          selectEl.innerHTML += `<option value="${t.code}">${t.displayName}</option>`;
+        });
+        if (curVal) selectEl.value = curVal;
+      }
+    }
+
+    function updateActiveTeacherBadge() {
+      const activeCode = localStorage.getItem("activeTeacherCode");
+      const badge = document.getElementById("activeTeacherBadge");
+      if (!badge) return;
+      if (!activeCode) {
+        badge.innerText = "👤 Faculty: Guest";
+        return;
+      }
+      const found = cachedTeachers.find(t => t.code === activeCode);
+      badge.innerText = `👤 Faculty: ${found ? found.displayName : activeCode}`;
+    }
+
+function handleLogin() {
+  const select = document.getElementById("loginTeacherSelect");
+  const code = select ? select.value : "";
+  if (!code) {
+    alert("Please select your teacher profile.");
+    return;
+  }
+  
+  localStorage.setItem("activeTeacherCode", code);
+  document.getElementById("loginOverlay").style.display = "none";
+  updateActiveTeacherBadge();
+  
+  // Request real push notification permission! [1]
+  messaging.requestPermission()
+    .then(function() {
+      console.log("Notification permission granted!");
+      // Paste your long VAPID key from Step 2 inside the single quotes below [user_context]!
+      return messaging.getToken({ vapidKey: 'PASTE_YOUR_LONG_VAPID_KEY_HERE' });
+    })
+    .then(function(realToken) {
+      console.log("Real FCM Token generated:", realToken);
+      
+      // Save the REAL device token directly to their Firestore profile [1]
+      return db.collection("teachers").doc(code).set({
+        fcmToken: realToken
+      }, { merge: true });
+    })
+    .then(function() {
+      autoLoadData();
+    })
+    .catch(function(err) {
+      console.warn("Notification setup skipped or blocked:", err);
+      autoLoadData(); // Load roster anyway even if notifications are blocked
+    });
+}
+
+function handleLogout() {
+  const code = localStorage.getItem("activeTeacherCode");
+  
+  // 1. Instantly log out on the frontend (Safe and fast!)
+  localStorage.removeItem("activeTeacherCode");
+  document.getElementById("loginOverlay").style.display = "flex";
+  updateActiveTeacherBadge();
+  
+  // 2. Clear the token in the database in the background [1]
+  if (code) {
+    try {
+      db.collection("teachers").doc(code).set({
+        fcmToken: "" // Simple, safe empty string to clear the token!
+      }, { merge: true })
+      .catch(err => console.error("Database logout warning:", err));
+    } catch (e) {
+      console.error("Synchronous logout warning:", e);
+    }
+  }
+}
+
+    function openLeaveModal() {
+      document.getElementById("leaveModal").style.display = "flex";
+    }
+
+    function closeLeaveModal() {
+      document.getElementById("leaveModal").style.display = "none";
+    }
+
+   function submitLeaveRecord() {
+  const date = document.getElementById("leaveDate").value;
+  const teacherCode = document.getElementById("leaveTeacherSelect").value;
+  const status = document.getElementById("leaveStatus").value;
+  const markedBy = localStorage.getItem("activeTeacherCode") || "Admin";
+  
+  if (!date || !teacherCode) {
+    alert("Please select both a date and a teacher.");
+    return;
+  }
+  
+  // Create a unique ID combining date and teacher code
+  const docId = date + "_" + teacherCode;
+  
+  // Save directly to Firestore and execute your original success actions [1]
+  db.collection("faculty_leaves").doc(docId).set({
+    date: date,
+    teacherCode: teacherCode,
+    status: status,
+    markedBy: markedBy
+  })
+  .then(function() {
+    alert("Faculty leave recorded successfully!");
+    document.getElementById("leaveTeacherSelect").value = "";
+    closeLeaveModal();
+  })
+  .catch(function(err) {
+    alert("Error saving leave: " + err.message);
+  });
+}
+
+    function openHolidayModal() {
+      const activeDate = document.getElementById("attDate").value;
+      document.getElementById("holidayModalDateDisplay").innerText = activeDate;
+      const tbody = document.getElementById("holidayDeptTableBody");
+      tbody.innerHTML = "";
+
+      DEPARTMENTS_LIST.forEach((dept) => {
+        let tr = document.createElement("tr");
+        let deptLabel = dept.replace("Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING", "BSc Computer Science (AI & ML)");
+        let html = `<td style="text-align: left; padding-left: 14px; font-weight: 700; color: #1e3a8a; white-space: nowrap;">${deptLabel}</td>`;
+        
+        YEARS_LIST.forEach(yr => {
+          html += `<td><input type="checkbox" class="holiday-chk" data-dept="${dept}" data-yr="${yr}" onchange="updateHolidaySelectionCount()"></td>`;
+        });
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+      });
+      updateHolidaySelectionCount();
+      document.getElementById("holidayModal").style.display = "flex";
+    }
+
+    function closeHolidayModal() {
+      document.getElementById("holidayModal").style.display = "none";
+    }
+
+    function toggleSelectAllHolidays(selectState) {
+      const chks = document.querySelectorAll(".holiday-chk");
+      chks.forEach(chk => chk.checked = selectState);
+      updateHolidaySelectionCount();
+    }
+
+    function updateHolidaySelectionCount() {
+      const chks = document.querySelectorAll(".holiday-chk:checked");
+      const countEl = document.getElementById("holidaySelectionCount");
+      if (countEl) countEl.innerText = `Selected: ${chks.length} classes`;
+    }
+
+function submitMultipleHolidays() {
+  const chks = document.querySelectorAll(".holiday-chk:checked");
+  if (chks.length === 0) {
+    alert("Please select at least one department class to mark as holiday.");
+    return;
+  }
+  
+  const activeDate = document.getElementById("attDate").value;
+  const deptMapping = {
+    "BA ENGLISH": "ENG",
+    "BA HISTORY": "HIS",
+    "B.COM CO-OPERATION": "COOP",
+    "B.COM LOGISTICS": "LOG",
+    "Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING": "CS",
+    "BBA TTM": "BBA"
+  };
+  
+  // 1. Initialize an atomic Firestore batch write! [1]
+  const batch = db.batch(); 
+  let count = 0;
+  
+  chks.forEach(chk => {
+    const dept = chk.getAttribute("data-dept");
+    const yr = chk.getAttribute("data-yr");
+    
+    const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+    const deptCode = deptMapping[dept] || "ENG";
+    const logDocId = deptCode + "_" + numericYear + "_" + activeDate;
+    
+    // 2. Prepare the empty holiday payload
+    const payload = {
+      isHoliday: true,
+      teachers: { h1: "", h2: "", h3: "", h4: "", h5: "" },
+      attendance: {}
+    };
+    
+    // 3. Queue the write into the batch [1]
+    const docRef = db.collection("attendance_logs").doc(logDocId);
+    batch.set(docRef, payload);
+    count++;
+  });
+  
+  // 4. Commit all changes to the cloud at once! [1]
+  batch.commit()
+    .then(() => {
+      alert(`Successfully marked holiday for ${count} classes on ${activeDate}!`);
+      closeHolidayModal();
+      autoLoadData(); // Reload the active table view!
+    })
+    .catch(err => {
+      alert("Error marking holidays in Firestore: " + err.message);
+    });
+}
+
+function autoLoadData() {
+  try {
+    const dept = document.getElementById("department").value;
+    const yr = document.getElementById("year").value;
+    const dateStr = document.getElementById("attDate").value;
+    
+    if (!dateStr) {
+      console.warn("Date is not selected yet.");
+      hideSplashScreen();
+      return;
+    }
+   
+    // 1. Timezone-safe local date parsing (Replaces hyphens with slashes)
+    const dateObj = new Date(dateStr.replace(/-/g, "/"));
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    let dayName = days[dateObj.getDay()];
+    
+    // Normalize casing (e.g., "Monday")
+       dayName = dayName.toUpperCase();
+    
+    const dayOfWeek = dateObj.getDay();
+    isHoliday = (dayOfWeek === 0 || dayOfWeek === 6); // Sunday (0) or Saturday (6)
+    
+    // 2. Map dropdown string values to numeric year formats [user_context]
+    const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+    
+    const deptMapping = {
+      "BA ENGLISH": "ENG",
+      "BA HISTORY": "HIS",
+      "B.COM CO-OPERATION": "COOP",
+      "B.COM LOGISTICS": "LOG",
+      "Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING": "CS",
+      "BBA TTM": "BBA"
+    };
+    const deptCode = deptMapping[dept] || "ENG";
+    
+    // 3. Setup Firestore parallel queries! [1]
+    const studentQuery = db.collection("students")
+      .where("department", "==", dept)
+      .where("year", "==", numericYear)
+      .get();
+      
+    const logDocId = deptCode + "_" + numericYear + "_" + dateStr;
+    const logQuery = db.collection("attendance_logs").doc(logDocId).get();
+    
+    const timetableDocId = dayName + "_" + deptCode + "_" + numericYear; // e.g., Monday_CS_2
+    const timetableQuery = db.collection("timetable").doc(timetableDocId).get();
+    
+    console.log("Searching Firestore Timetable for ID:", timetableDocId);
+    
+       Promise.all([studentQuery, logQuery, timetableQuery])
+      .then(([studentSnapshot, logSnapshot, timetableSnapshot]) => {
+        
+        // 🔍 DEBUG LOGS: Open your browser's inspect console to read these!
+        console.log("--- TIMETABLE DEBUG LOG ---");
+        console.log("Searching for document ID:", timetableDocId);
+        console.log("Document found in Firestore?", timetableSnapshot.exists);
+        if (timetableSnapshot.exists) {
+          console.log("Timetable data inside database:", JSON.stringify(timetableSnapshot.data()));
+        }
+        console.log("----------------------------");
+
+        const students = [];
+        studentSnapshot.forEach(doc => {
+          const data = doc.data();
+          students.push({
+            originalRollNo: data.rollNo,
+            name: data.name,
+            status: data.status || "Active"
+          });
+        });
+        
+        students.sort((a, b) => Number(a.originalRollNo) - Number(b.originalRollNo));
+        
+        let activeCounter = 1;
+        students.forEach(st => {
+          if (st.status === "Active") {
+            st.rollNo = (activeCounter++).toString();
+          } else {
+            st.rollNo = "-";
+          }
+        });
+        
+        currentRoster = students;
+        const activeStudents = currentRoster.filter(st => st.status === "Active");
+        
+        const tbody = document.getElementById("tableBody");
+        const badge = document.getElementById("studentCountBadge");
+        
+        if (activeStudents.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="color:var(--danger); padding:16px;">No active students found in Firestore for ${dept} (${yr}).</td></tr>`;
+          if (badge) badge.innerText = `Total Students: 0`;
+          updateLiveStatus();
+          hideSplashScreen();
+          return;
+        }
+        
+        if (badge) badge.innerText = `Total Students: ${activeStudents.length}`;
+        
+        // Determine log state and auto-fill scheduled teachers if new!
+        let existingLog = null;
+        if (logSnapshot.exists) {
+          existingLog = logSnapshot.data();
+        } else {
+          let scheduledTeachers = { h1: "", h2: "", h3: "", h4: "", h5: "" };
+          if (timetableSnapshot.exists) {
+            scheduledTeachers = timetableSnapshot.data();
+          }
+          existingLog = {
+            isHoliday: isHoliday,
+            teachers: scheduledTeachers,
+            attendance: {}
+          };
+        }
+        
+        renderTable(existingLog);
+        hideSplashScreen();
+      })
+
+  } catch (globalErr) {
+    console.error("Global crash in autoLoadData:", globalErr);
+    hideSplashScreen();
+  }
+}
+
+    function renderTable(existingLog) {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+      if (existingLog && existingLog.isHoliday) {
+        isHoliday = true;
+      }
+      const banner = document.getElementById("holidayBanner");
+      if (banner) banner.style.display = isHoliday ? "block" : "none";
+     
+          let assignedTeachersMap = {};
+    for (let h = 1; h <= 5; h++) {
+      let tSelect = document.getElementById(`t${h}`);
+      if (tSelect) {
+        const scheduledValue = existingLog && existingLog.teachers && existingLog.teachers[`h${h}`];
+        
+        if (scheduledValue) {
+          // Smart check: If "CVA/NR" is not in the dropdown, add it dynamically!
+          let optionExists = Array.from(tSelect.options).some(opt => opt.value === scheduledValue);
+          if (!optionExists) {
+            const newOpt = document.createElement("option");
+            newOpt.value = scheduledValue;
+            newOpt.innerText = scheduledValue + " (MDC)";
+            newOpt.style.fontWeight = "bold";
+            newOpt.style.color = "#1d4ed8";
+            tSelect.appendChild(newOpt);
+          }
+          
+          tSelect.value = scheduledValue;
+          assignedTeachersMap[h] = scheduledValue;
+        } else {
+          tSelect.value = "";
+          assignedTeachersMap[h] = "";
+        }
+      }
+    }
+      const activeStudents = currentRoster.filter(st => st.status === "Active");
+      activeStudents.forEach(st => {
+        let tr = document.createElement("tr");
+        let html = `<td>${st.rollNo}</td><td style="text-align:left;">${st.name}</td>`;
+       
+        let presentHours = 0;
+        for (let h = 1; h <= 5; h++) {
+          let isChecked = (existingLog && existingLog.attendance && existingLog.attendance[st.originalRollNo] && existingLog.attendance[st.originalRollNo][`h${h}`]);
+          if (isChecked) presentHours++;
+          let checkedStr = isChecked ? "checked" : "";
+          html += `<td><input type="checkbox" id="chk_${st.originalRollNo}_h${h}" ${checkedStr} onchange="updateLiveStatus()"></td>`;
+        }
+       
+        let initialBadge = '<span class="badge-absent">Absent</span>';
+        if (presentHours === 5) {
+          initialBadge = '<span class="badge-fullday">Full Day</span>';
+        } else if (presentHours >= 2 && presentHours <= 4) {
+          initialBadge = '<span class="badge-halfday">Half Day</span>';
+        }
+       
+        html += `<td id="status_cell_${st.originalRollNo}">${initialBadge}</td>`;
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+      });
+      updateLiveStatus();
+    }
+
+    function updateLiveStatus() {
+      let full = 0, half = 0, absent = 0;
+      const activeStudents = currentRoster.filter(st => st.status === "Active");
+      if (activeStudents.length > 0) {
+        activeStudents.forEach(st => {
+          let hrs = 0;
+          for (let h = 1; h <= 5; h++) {
+            let chk = document.getElementById(`chk_${st.originalRollNo}_h${h}`);
+            if (chk && chk.checked) hrs++;
+          }
+          let cell = document.getElementById(`status_cell_${st.originalRollNo}`);
+          if (cell) {
+            if (hrs === 5) {
+              cell.innerHTML = `<span class="badge-fullday">Full Day</span>`;
+              full++;
+            } else if (hrs >= 2 && hrs <= 4) {
+              cell.innerHTML = `<span class="badge-halfday">Half Day</span>`;
+              half++;
+            } else {
+              cell.innerHTML = `<span class="badge-absent">Absent</span>`;
+              absent++;
+            }
+          }
+        });
+      }
+      const cntFull = document.getElementById("cntFull");
+      const cntHalf = document.getElementById("cntHalf");
+      const cntAbsent = document.getElementById("cntAbsent");
+      if (cntFull) cntFull.innerText = `Full Day: ${full}`;
+      if (cntHalf) cntHalf.innerText = `Half Day: ${half}`;
+      if (cntAbsent) cntAbsent.innerText = `Absent: ${absent}`;
+    }
+
+    function markFullHour(h) {
+      const teacherVal = document.getElementById(`t${h}`).value;
+      if (!teacherVal) {
+        alert(`Please select a Teacher for Hour ${h} first.`);
+        return;
+      }
+      const activeStudents = currentRoster.filter(st => st.status === "Active");
+      activeStudents.forEach(st => {
+        let chk = document.getElementById(`chk_${st.originalRollNo}_h${h}`);
+        if (chk) chk.checked = true;
+      });
+      updateLiveStatus();
+    }
+
+   function removeAllAttendance() {
+  const dept = document.getElementById("department").value;
+  const yr = document.getElementById("year").value;
+  const dateStr = document.getElementById("attDate").value;
+  
+  const confirmed = confirm(`⚠️ WARNING!\n\nAre you sure you want to PERMANENTLY delete attendance and holiday records for:\nDepartment: ${dept}\nYear: ${yr}\nDate: ${dateStr}?`);
+  if (!confirmed) return;
+
+  const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+  const deptMapping = {
+    "BA ENGLISH": "ENG",
+    "BA HISTORY": "HIS",
+    "B.COM CO-OPERATION": "COOP",
+    "B.COM LOGISTICS": "LOG",
+    "Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING": "CS",
+    "BBA TTM": "BBA"
+  };
+  const deptCode = deptMapping[dept] || "ENG";
+  const logDocId = deptCode + "_" + numericYear + "_" + dateStr;
+
+  // 1. Delete the daily log document from Firestore [1]
+  db.collection("attendance_logs").doc(logDocId).delete()
+    .then(() => {
+      alert("Attendance and holiday records permanently deleted from Firestore!");
+      
+      // 2. Reset the dropdown values to blank
+      for (let h = 1; h <= 5; h++) {
+        let tSelect = document.getElementById(`t${h}`);
+        if (tSelect) tSelect.value = "";
+      }
+      
+      // 3. Uncheck all checkboxes on the screen
+      const activeStudents = currentRoster.filter(st => st.status === "Active");
+      activeStudents.forEach(st => {
+        for (let h = 1; h <= 5; h++) {
+          let chk = document.getElementById(`chk_${st.originalRollNo}_h${h}`);
+          if (chk) chk.checked = false;
+        }
+      });
+      
+      isHoliday = false;
+      const banner = document.getElementById("holidayBanner");
+      if (banner) banner.style.display = "none";
+      
+      // 4. Re-load the page to automatically fetch the fresh scheduled timetable! [1]
+      autoLoadData();
+    })
+    .catch(err => {
+      alert("Error deleting record from Firestore: " + err.message);
+    });
+}
+
+    function triggerPromotion() {
+      if (confirm("Are you sure you want to promote students to the next academic year across all departments?")) {
+        google.script.run
+          .withSuccessHandler(msg => {
+            alert(msg);
+            autoLoadData();
+          })
+          .promoteStudents();
+      }
+    }
+
+function saveData() {
+  const saveBtn = document.querySelector(".save-action-area button");
+  if (saveBtn && saveBtn.disabled) return;
+  
+  let totalTicks = 0;
+  const activeStudents = currentRoster.filter(st => st.status === "Active");
+  activeStudents.forEach(st => {
+    for (let h = 1; h <= 5; h++) {
+      let chk = document.getElementById(`chk_${st.originalRollNo}_h${h}`);
+      if (chk && chk.checked) totalTicks++;
+    }
+  });
+  
+  if (totalTicks === 0 && !isHoliday) {
+    alert("Cannot save: No attendance has been marked for any student/hour.");
+    return;
+  }
+  
+  for (let h = 1; h <= 5; h++) {
+    const teacherCode = document.getElementById(`t${h}`).value;
+    let hourHasTicks = false;
+    activeStudents.forEach(st => {
+      let chk = document.getElementById(`chk_${st.originalRollNo}_h${h}`);
+      if (chk && chk.checked) hourHasTicks = true;
+    });
+    if (hourHasTicks && !teacherCode) {
+      alert(`Please select a Teacher name for Hour ${h} before saving attendance.`);
+      return;
+    }
+  }
+  
+  const dept = document.getElementById("department").value;
+  const yr = document.getElementById("year").value;
+  const dateStr = document.getElementById("attDate").value;
+  
+  // 1. Map string values to database formats [user_context]
+  const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+  const deptMapping = {
+    "BA ENGLISH": "ENG",
+    "BA HISTORY": "HIS",
+    "B.COM CO-OPERATION": "COOP",
+    "B.COM LOGISTICS": "LOG",
+    "Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING": "CS",
+    "BBA TTM": "BBA"
+  };
+  const deptCode = deptMapping[dept] || "ENG";
+  
+  // 2. Build the complete, query-ready database payload
+  let payload = { 
+    isHoliday: isHoliday, 
+    teachers: {}, 
+    attendance: {},
+    date: dateStr,
+    departmentCode: deptCode,
+    year: numericYear
+  };
+  
+  for (let h = 1; h <= 5; h++) {
+    payload.teachers["h" + h] = document.getElementById("t" + h).value;
+  }
+  currentRoster.forEach(st => {
+    payload.attendance[st.originalRollNo] = {};
+    for (let h = 1; h <= 5; h++) {
+      let chk = document.getElementById("chk_" + st.originalRollNo + "_h" + h);
+      payload.attendance[st.originalRollNo]["h" + h] = chk ? chk.checked : false;
+    }
+  });
+  
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = "0.6";
+    saveBtn.innerText = "⏳ Saving Attendance...";
+  }
+  
+  // 3. Save directly to Firestore!
+  const logDocId = deptCode + "_" + numericYear + "_" + dateStr;
+  
+  db.collection("attendance_logs").doc(logDocId).set(payload)
+    .then(() => {
+      alert("Attendance saved permanently in Firestore!");
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = "1";
+        saveBtn.innerText = "💾 Save Attendance Permanently";
+      }
+    })
+    .catch((err) => {
+      alert("Error saving attendance: " + err.message);
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = "1";
+        saveBtn.innerText = "💾 Save Attendance Permanently";
+      }
+    });
+}
+
+    function toggleConsolidatedCard() {
+      const card = document.getElementById("reportCard");
+      card.style.display = card.style.display === "none" ? "block" : "none";
+    }
+
+function viewConsolidatedReport() {
+  const dept = document.getElementById("department").value;
+  const yr = document.getElementById("year").value;
+  const fromDate = document.getElementById("summaryFromDate").value;
+  const toDate = document.getElementById("summaryToDate").value;
+  
+  if (!fromDate || !toDate) {
+    alert("Please select both From Date and To Date.");
+    return;
+  }
+  
+  const summaryContainer = document.getElementById("reportSummarySection");
+  const printDateWiseContainer = document.getElementById("printReportDateWiseSection");
+  const metaHeader = document.getElementById("reportMetaHeader");
+ 
+  summaryContainer.innerHTML = `<div style="text-align:center; padding:20px;">Generating cumulative attendance summary from Firestore...</div>`;
+  printDateWiseContainer.innerHTML = "";
+  
+  const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+  const deptMapping = {
+    "BA ENGLISH": "ENG",
+    "BA HISTORY": "HIS",
+    "B.COM CO-OPERATION": "COOP",
+    "B.COM LOGISTICS": "LOG",
+    "Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING": "CS",
+    "BBA TTM": "BBA"
+  };
+  const deptCode = deptMapping[dept] || "ENG";
+  
+  // 1. Fetch active students and matched attendance logs [1]
+  const studentsPromise = db.collection("students")
+    .where("department", "==", dept)
+    .where("year", "==", numericYear)
+    .get();
+    
+  const logsPromise = db.collection("attendance_logs")
+    .where("departmentCode", "==", deptCode)
+    .where("year", "==", numericYear)
+    .where("date", ">=", fromDate)
+    .where("date", "<=", toDate)
+    .get();
+    
+  Promise.all([studentsPromise, logsPromise])
+    .then(([studentSnapshot, logSnapshot]) => {
+      summaryContainer.innerHTML = "";
+      
+      const studentsList = [];
+      studentSnapshot.forEach(doc => {
+        const data = doc.data();
+        studentsList.push({
+          rollNo: "", // sequential placeholder
+          originalRollNo: data.rollNo,
+          name: data.name,
+          status: data.status || "Active",
+          daysPresent: 0,
+          hoursPresent: 0
+        });
+      });
+      
+      studentsList.sort((a, b) => Number(a.originalRollNo) - Number(b.originalRollNo));
+      
+      let activeCounter = 1;
+      studentsList.forEach(st => {
+        if (st.status === "Active") st.rollNo = (activeCounter++).toString();
+      });
+      
+      const activeStudents = studentsList.filter(st => st.status === "Active");
+      if (activeStudents.length === 0) {
+        summaryContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger);">No active students found.</div>`;
+        return;
+      }
+      
+      let totalClasses = 0;
+      let totalHoursConducted = 0;
+      let datesList = [];
+      let teachersMap = {};
+      let dateWiseMap = {};
+      
+      logSnapshot.forEach(doc => {
+        const log = doc.data();
+        if (log.isHoliday) return;
+        
+        totalClasses++;
+        totalHoursConducted += 5;
+        datesList.push(log.date);
+        teachersMap[log.date] = log.teachers || {};
+        
+        activeStudents.forEach(st => {
+          if (!dateWiseMap[st.originalRollNo]) dateWiseMap[st.originalRollNo] = {};
+          
+          let dayHoursObj = log.attendance && log.attendance[st.originalRollNo] ? log.attendance[st.originalRollNo] : {};
+          dateWiseMap[st.originalRollNo][log.date] = dayHoursObj;
+          
+          let hrs = 0;
+          for (let h = 1; h <= 5; h++) {
+            if (dayHoursObj[`h${h}`]) hrs++;
+          }
+          st.hoursPresent += hrs;
+          if (hrs === 5) st.daysPresent += 1;
+          else if (hrs >= 2 && hrs <= 4) st.daysPresent += 0.5;
+        });
+      });
+      
+      datesList.sort();
+      
+      metaHeader.innerHTML = `Department: <b>${dept}</b> | Year: <b>${yr}</b> | Period: <b>${fromDate}</b> to <b>${toDate}</b><br>Total Working Days: <b>${totalClasses} Days (${totalHoursConducted} Hours)</b>`;
+      
+      let sumTableContainer = document.createElement("div");
+      sumTableContainer.className = "table-container";
+      sumTableContainer.innerHTML = `
+        <h4 style="color:#1e3a8a; margin-bottom:8px;">📈 Final Cumulative Attendance Summary</h4>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Roll No</th>
+              <th style="text-align:left;">Student Name</th>
+              <th>Total Classes</th>
+              <th>Total Hours</th>
+              <th>Days Present</th>
+              <th>Hours Present</th>
+              <th>Attendance %</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${activeStudents.map(st => {
+              let pct = totalHoursConducted > 0 ? ((st.hoursPresent / totalHoursConducted) * 100).toFixed(1) : "0.0";
+              let isLow = parseFloat(pct) < 75;
+              let lowStyle = isLow ? 'style="background-color: #ffe6e6; color: #dc3545; font-weight: bold; border-radius: 4px; padding: 2px 6px;"' : '';
+              return `<tr>
+                <td>${st.rollNo}</td>
+                <td style="text-align:left;">${st.name}</td>
+                <td>${totalClasses}</td>
+                <td>${totalHoursConducted}</td>
+                <td>${st.daysPresent}</td>
+                <td>${st.hoursPresent}</td>
+                <td><span ${lowStyle}>${pct}%${isLow ? '⚠️' : ''}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      summaryContainer.appendChild(sumTableContainer);
+      
+      // 2. Generate date-wise printed blocks (same as your original chunking!)
+      if (datesList.length > 0) {
+        let dateWiseHeading = document.createElement("h4");
+        dateWiseHeading.style.cssText = "color:#1e3a8a; margin-top:20px; margin-bottom:8px;";
+        dateWiseHeading.innerText = "📅 Detailed Date & Hour-wise Student Attendance Report";
+        printDateWiseContainer.appendChild(dateWiseHeading);
+        
+        const CHUNK_SIZE = 4;
+        for (let i = 0; i < datesList.length; i += CHUNK_SIZE) {
+          let dateChunk = datesList.slice(i, i + CHUNK_SIZE);
+          let blockDiv = document.createElement("div");
+          blockDiv.style.marginBottom = "24px";
+          blockDiv.innerHTML = `<div style="font-weight:700; font-size:11px; margin-bottom:4px; color:#1e3a8a;">🗓️ Date Block: ${dateChunk[0]} to ${dateChunk[dateChunk.length-1]}</div>`;
+          
+          let tableContainer = document.createElement("div");
+          tableContainer.className = "table-container";
+          
+          let table = document.createElement("table");
+          let thead = document.createElement("thead");
+          let headerRow = `<tr><th style="width:40px;">Roll No</th><th style="text-align:left; min-width:110px;">Student Name</th>`;
+          dateChunk.forEach(d => {
+            let tMap = teachersMap[d] || {};
+            headerRow += `<th>${d}<br><span style="font-size:6.5px; font-weight:normal;">H1(${tMap.h1||'-'}) H2(${tMap.h2||'-'}) H3(${tMap.h3||'-'}) H4(${tMap.h4||'-'}) H5(${tMap.h5||'-'})</span></th>`;
+          });
+          headerRow += `</tr>`;
+          thead.innerHTML = headerRow;
+          table.appendChild(thead);
+          
+          let tbody = document.createElement("tbody");
+          activeStudents.forEach(st => {
+            let tr = document.createElement("tr");
+            let rowHtml = `<td>${st.rollNo}</td><td style="text-align:left;">${st.name}</td>`;
+            dateChunk.forEach(d => {
+              let dayHoursObj = dateWiseMap[st.originalRollNo] && dateWiseMap[st.originalRollNo][d] ? dateWiseMap[st.originalRollNo][d] : {};
+              let tMap = teachersMap[d] || {};
+              
+              let tickDisplay = "";
+              for (let h = 1; h <= 5; h++) {
+                let isPres = dayHoursObj[`h${h}`];
+                let tCode = tMap[`h${h}`] || "";
+                let symbol = isPres ? "✓" : "-";
+                tickDisplay += `${symbol}<sub style="font-size:5.5px; color:#2563eb;">${tCode}</sub> `;
+              }
+              rowHtml += `<td style="font-size:8px; font-family:monospace; white-space:nowrap;">${tickDisplay}</td>`;
+            });
+            tr.innerHTML = rowHtml;
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          tableContainer.appendChild(table);
+          blockDiv.appendChild(tableContainer);
+          printDateWiseContainer.appendChild(blockDiv);
+        }
+      }
+    })
+    .catch(err => {
+      console.error("Error generating report:", err);
+      summaryContainer.innerHTML = `<div style="text-align:center; padding:20px; color:red;">Error loading report: ${err.message}</div>`;
+    });
+}
+
+    function triggerAndroidPrint() {
+      if (typeof AndroidPrintHost !== 'undefined' && AndroidPrintHost.printPage) {
+        AndroidPrintHost.printPage();
+      } else {
+        window.print();
+      }
+    }
+
+    function hideSplashScreen() {
+      const splash = document.getElementById("appSplashScreen");
+      if (splash) splash.classList.add("hidden");
+    }
+
+    function checkAttendanceMissingWorkflow() {
+      const dateStr = document.getElementById("attDate").value;
+      const container = document.getElementById("gapAlertsContainer");
+      const loggedInTeacher = localStorage.getItem("activeTeacherCode") || "";
+      if (!container) return;
+     
+      container.innerHTML = '<span style="color: #b45309;">Scanning college-wide attendance gaps...</span>';
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (!response.success || response.alerts.length === 0) {
+            container.innerHTML = '<div style="color: #166534; background: #dcfce7; padding: 8px 12px; border-radius: 6px; font-weight: 600;">✅ No college-wide attendance gaps found for today!</div>';
+            return;
+          }
+         
+          let myAlerts = [];
+          let otherAlertsCount = 0;
+          response.alerts.forEach(function(alert) {
+            if (loggedInTeacher && alert.responsibleTeacher.toLowerCase().includes(loggedInTeacher.toLowerCase())) {
+              myAlerts.push(alert);
+            } else {
+              otherAlertsCount++;
+            }
+          });
+          if (myAlerts.length > 0 && "Notification" in window) {
+            if (Notification.permission === "granted") {
+              new Notification("HGC Attendance Reminder", {
+                body: `You have ${myAlerts.length} unmarked attendance hour(s) today. Please log them immediately.`
+              });
+            } else if (Notification.permission !== "denied") {
+              Notification.requestPermission();
+            }
+          }
+          let html = '<div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px;">';
+          if (myAlerts.length > 0) {
+            myAlerts.forEach(function(alert) {
+              html += `<div style="background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #dc2626; font-weight: 600;">🚨 [Action Required For You] ${alert.message}</div>`;
+            });
+          }
+          if (otherAlertsCount > 0) {
+            html += `<div style="background: #fffbeb; color: #b45309; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #d97706; font-weight: 600;">ℹ️ ${otherAlertsCount} other college-wide gap(s) detected and forwarded to respective faculty/substitutes.</div>`;
+          }
+          html += '</div>';
+          container.innerHTML = html;
+        })
+        .withFailureHandler(function(err) {
+          container.innerHTML = '<div style="color: #dc2626;">Error checking gaps: ' + err.message + '</div>';
+        })
+        .checkAllAttendanceGapsGlobal(dateStr);
+    }
+
+  function openTcModal() {
+  const modal = document.getElementById("tcModal");
+  modal.style.display = "flex";
+  const tbody = document.getElementById("tcModalTableBody");
+  tbody.innerHTML = `<tr><td colspan="4">Loading roster from Firestore...</td></tr>`;
+ 
+  const dept = document.getElementById("department").value;
+  const yr = document.getElementById("year").value;
+  const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+  
+  // Fetch directly from Firestore! [1]
+  db.collection("students")
+    .where("department", "==", dept)
+    .where("year", "==", numericYear)
+    .get()
+    .then(studentSnapshot => {
+      tbody.innerHTML = "";
+      const students = [];
+      studentSnapshot.forEach(doc => {
+        const data = doc.data();
+        students.push({
+          originalRollNo: data.rollNo,
+          name: data.name,
+          status: data.status || "Active"
+        });
+      });
+      
+      students.sort((a, b) => Number(a.originalRollNo) - Number(b.originalRollNo));
+      
+      if (students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4">No students found.</td></tr>`;
+        return;
+      }
+      
+      students.forEach(st => {
+        let currentStatus = st.status || "Active";
+        let isDeparted = (currentStatus === "TC Issued" || currentStatus === "Exited");
+       
+        let actionCell = isDeparted
+          ? `<button class="btn btn-report" style="padding:4px 10px; font-size:11px;" onclick="generateCertificate('${st.originalRollNo}', '${st.name}')">Certificate</button>`
+          : `<span style="color:#94a3b8; font-size:11px;">Active Student</span>`;
+       
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${st.originalRollNo}</td>
+          <td style="text-align:left;">${st.name}</td>
+          <td>
+            <select id="statusSelect_${st.originalRollNo}" style="width:130px; padding:6px; font-size:12px; font-weight:700;" onchange="changeStudentStatus('${st.originalRollNo}', this.value)">
+              <option value="Active" ${currentStatus === "Active" ? "selected" : ""}>Active</option>
+              <option value="TC Issued" ${currentStatus === "TC Issued" ? "selected" : ""}>TC Issued</option>
+              <option value="Exited" ${currentStatus === "Exited" ? "selected" : ""}>Exited</option>
+            </select>
+          </td>
+          <td style="text-align:center;">${actionCell}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    })
+    .catch(err => {
+      tbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error loading roster: ${err.message}</td></tr>`;
+    });
+}
+
+    function closeTcModal() {
+      document.getElementById("tcModal").style.display = "none";
+      autoLoadData();
+    }
+
+function changeStudentStatus(originalRollNo, newStatus) {
+  const dept = document.getElementById("department").value;
+  const yr = document.getElementById("year").value;
+  
+  const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+  const deptMapping = {
+    "BA ENGLISH": "ENG",
+    "BA HISTORY": "HIS",
+    "B.COM CO-OPERATION": "COOP",
+    "B.COM LOGISTICS": "LOG",
+    "Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING": "CS",
+    "BBA TTM": "BBA"
+  };
+  const deptCode = deptMapping[dept] || "ENG";
+  
+  // 1. Identify the unique student document ID [1]
+  const studentId = deptCode + "_" + numericYear + "_" + originalRollNo;
+  
+  // 2. Update their status directly in Firestore instantly! [1]
+  db.collection("students").doc(studentId).update({
+    status: newStatus
+  })
+  .then(() => {
+    alert("Student status updated successfully!");
+    openTcModal(); // Reload the TC modal view
+  })
+  .catch(err => {
+    alert("Error updating status: " + err.message);
+  });
+}
+
+function generateCertificate(originalRollNo, name) {
+  const dept = document.getElementById("department").value;
+  const yr = document.getElementById("year").value;
+  
+  const numericYear = yr.includes("1") ? 1 : yr.includes("2") ? 2 : yr.includes("3") ? 3 : 1;
+  const deptMapping = {
+    "BA ENGLISH": "ENG",
+    "BA HISTORY": "HIS",
+    "B.COM CO-OPERATION": "COOP",
+    "B.COM LOGISTICS": "LOG",
+    "Bsc COMPUTER SCIENCE WITH AI AND MACHINE LEARNING": "CS",
+    "BBA TTM": "BBA"
+  };
+  const deptCode = deptMapping[dept] || "ENG";
+  
+  const certBody = document.getElementById("certDetailsBody");
+  document.getElementById("certPrintDate").innerText = new Date().toLocaleDateString();
+  certBody.innerHTML = `<p>Calculating cumulative attendance history from Firestore...</p>`;
+  document.getElementById("certificateModal").style.display = "block";
+  
+  // 3. Query all saved logs to aggregate their attendance history [1]
+  db.collection("attendance_logs")
+    .where("departmentCode", "==", deptCode)
+    .where("year", "==", numericYear)
+    .get()
+    .then(logSnapshot => {
+      let totalClasses = 0;
+      let totalHoursConducted = 0;
+      let hoursPresent = 0;
+      let daysPresent = 0;
+      
+      logSnapshot.forEach(doc => {
+        const log = doc.data();
+        if (log.isHoliday) return;
+        
+        totalClasses++;
+        totalHoursConducted += 5;
+        
+        let dayHoursObj = log.attendance && log.attendance[originalRollNo] ? log.attendance[originalRollNo] : {};
+        let hrs = 0;
+        for (let h = 1; h <= 5; h++) {
+          if (dayHoursObj[`h${h}`]) hrs++;
+        }
+        hoursPresent += hrs;
+        if (hrs === 5) daysPresent += 1;
+        else if (hrs >= 2 && hrs <= 4) daysPresent += 0.5;
+      });
+      
+      const percentage = totalHoursConducted > 0 ? ((hoursPresent / totalHoursConducted) * 100).toFixed(1) + "%" : "0.0%";
+      
+      // 4. Draw the official certificate [user_context]
+      certBody.innerHTML = `
+        <p>This is to certify that <b>${name}</b> (Roll No: <b>${originalRollNo}</b>), enrolled in the <b>${yr}</b> of <b>${dept}</b> at <b>Hermann Gundert College of Advanced Studies, Thalassery (HGC)</b>, has maintained the following attendance record during their tenure:</p>
+        <ul style="line-height:1.8; list-style-type:none; padding:0;">
+          <li>📅 Total College Working Days: <b>${totalClasses} Days</b></li>
+          <li>⏰ Total Hours Conducted: <b>${totalHoursConducted} Hours</b></li>
+          <li>✅ Total Days Attended: <b>${daysPresent} Days</b></li>
+          <li>⏱️ Total Hours Attended: <b>${hoursPresent} Hours</b></li>
+          <li>📊 Cumulative Attendance Percentage: <b style="color:${parseFloat(percentage) < 75 ? '#dc3545' : '#166534'};">${percentage}</b></li>
+        </ul>
+        <p>This certificate is issued upon student departure / TC issuance for all official and academic purposes.</p>
+      `;
+    })
+    .catch(err => {
+      alert("Error generating certificate: " + err.message);
+      closeCertificateModal();
+    });
+}
+
+    function closeCertificateModal() {
+      document.getElementById("certificateModal").style.display = "none";
+    }
+  </script>
+</body>
+</html>
